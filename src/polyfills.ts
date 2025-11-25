@@ -1,13 +1,6 @@
-/***************************************************************************************************
- * BROWSER POLYFILLS
- */
 
-// Zone JS is required by Angular itself.
-import 'zone.js'; // Included with Angular CLI by default
+/* Zone JS is required by Angular itself. */
+import 'zone.js'; // Included with Angular CLI.
 
-// If you use Angular Localize (i18n runtime)
+/* If you use Angular Localize for runtime translations */
 import '@angular/localize/init';
-
-/***************************************************************************************************
- * APPLICATION IMPORTS
- */
