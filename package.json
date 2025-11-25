@@ -5,7 +5,7 @@
   "ng": "ng",
   "start": "ng serve",
   "build": "ng build --configuration production",
-  "postbuild": "cp -f dist/mp/index.html dist/mp/404.html || true",
+  "postbuild": "sh -c 'i=0; while [ $i -lt 10 ] && [ ! -f dist/mp/index.html ]; do sleep 1; i=$((i+1)); done; cp -f dist/mp/index.html dist/mp/404.html || true'",
   "watch": "ng build --watch --configuration development",
   "test": "ng test"
   },
