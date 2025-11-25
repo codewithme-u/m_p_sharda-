@@ -1,4 +1,5 @@
 {
-  "root": "dist/mp",
-  "routes": { "/**": "index.html" }
+  "routes": {
+    "/**": "index.html"
+  }
 }
