@@ -26,13 +26,10 @@
               "src/assets"
             ],
             "styles": [
-              "node_modules/bootstrap/dist/css/bootstrap.min.css",
               "src/styles.css",
-              "https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css",
-              "node_modules/bootstrap-icons/font/bootstrap-icons.css"
+              "https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
             ],
             "scripts": [
-              "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
             ]
           },
           "configurations": {
@@ -40,7 +37,7 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
+                  "maximumWarning": "800kB",
                   "maximumError": "1MB"
                 },
                 {
