@@ -1,13 +1,15 @@
+// src/app/Pages/dashboard/general-dashboard/general-dashboard.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http'; // ✅ Required for Analytics
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../core/services/AuthService/auth.service';
 import { QuizService } from '../../../core/services/QuizService/quiz.service';
 import { UserService } from '../../../core/services/UserService/user.service';
 import { Quiz } from '../../../../../INTERFACE/quiz';
 import { QuizHistory } from '../../../../../INTERFACE/quiz-history';
+import { environment } from './../../../../environments/environment';
 
 declare var bootstrap: any;
 
@@ -16,7 +18,7 @@ declare var bootstrap: any;
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './general-dashboard.component.html',
-  styleUrl: './general-dashboard.component.css'
+  styleUrls: ['./general-dashboard.component.css'] // <-- fixed
 })
 export class GeneralDashboardComponent implements OnInit {
 
@@ -51,18 +53,21 @@ export class GeneralDashboardComponent implements OnInit {
   selectedReportQuiz: string = '';
   activeFilter: 'ALL' | 'PASS' | 'FAIL' | 'TOP' | 'LOW' = 'ALL';
 
+  // base URL from environment (empty string in dev, full URL in prod)
+  private apiBase = (environment.apiUrl || '').replace(/\/$/, '');
+
   constructor(
     private auth: AuthService, 
     private router: Router,
     private quizService: QuizService,
     private userService: UserService,
-    private http: HttpClient // ✅ Injected for Analytics API
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
     this.loadUserProfile();
     this.loadQuizzes();
-    this.loadHistory(); 
+    this.loadHistory();
 
     // Auto-refresh data when changes happen (Create/Delete)
     this.quizService.refreshNeeded$.subscribe(() => {
@@ -88,8 +93,14 @@ export class GeneralDashboardComponent implements OnInit {
     this.userService.getMe().subscribe({
       next: (data) => {
         this.currentUser = data;
+        // if backend returns a relative path, prefix with apiBase (if set)
         if (this.currentUser.profileImageUrl && !this.currentUser.profileImageUrl.startsWith('http')) {
-          this.currentUser.profileImageUrl = 'http://localhost:8080/' + this.currentUser.profileImageUrl;
+          if (this.apiBase) {
+            this.currentUser.profileImageUrl = `${this.apiBase}/${this.currentUser.profileImageUrl.replace(/^\//, '')}`;
+          } else {
+            // dev: keep relative so dev proxy / server serves it
+            this.currentUser.profileImageUrl = `/${this.currentUser.profileImageUrl.replace(/^\//, '')}`;
+          }
         }
       },
       error: (err) => console.error('Failed to load profile', err)
@@ -134,14 +145,23 @@ export class GeneralDashboardComponent implements OnInit {
     this.activeFilter = 'ALL';
     this.filteredParticipants = []; // Clear previous
 
-    this.http.get<any[]>(`http://localhost:8080/api/results/participants/${quizId}`).subscribe({
+    const url = this.apiBase ? `${this.apiBase}/api/results/participants/${quizId}` : `/api/results/participants/${quizId}`;
+    this.http.get<any[]>(url).subscribe({
       next: (data) => {
         this.reportParticipants = data;
         this.filteredParticipants = data; // Show all initially
-        const modal = new bootstrap.Modal(document.getElementById('analyticsModal'));
-        modal.show();
+        const el = document.getElementById('analyticsModal');
+        if (el) {
+          const modal = new bootstrap.Modal(el);
+          modal.show();
+        } else {
+          console.warn('analyticsModal element not found in DOM');
+        }
       },
-      error: () => alert('Failed to load report data')
+      error: (err) => {
+        console.error('Failed to load report data', err);
+        alert('Failed to load report data');
+      }
     });
   }
 
@@ -167,12 +187,19 @@ export class GeneralDashboardComponent implements OnInit {
         break;
     }
   }
+  
+getAvatarColor(name: string): string {
+  const colors = ['bg-primary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'bg-dark'];
+  if (!name || name.length === 0) return colors[0];
 
-  getAvatarColor(name: string): string {
-    const colors = ['bg-primary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'bg-dark'];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
-  }
+  const code = name.charCodeAt(0);
+  if (!Number.isFinite(code)) return colors[0];
+
+  const index = Math.abs(code) % colors.length;
+  return colors[index];
+}
+
+
 
   // Helper for progress bars (used in History & Analytics)
   getPercentage(score: number, total: number): number {
@@ -188,8 +215,13 @@ export class GeneralDashboardComponent implements OnInit {
 
   openCreateModal() {
     this.newQuiz = { title: '', description: '' }; 
-    const modal = new bootstrap.Modal(document.getElementById('createQuizModal'));
-    modal.show();
+    const el = document.getElementById('createQuizModal');
+    if (el) {
+      const modal = new bootstrap.Modal(el);
+      modal.show();
+    } else {
+      console.warn('createQuizModal element not found');
+    }
   }
 
   createQuiz() {
@@ -197,21 +229,42 @@ export class GeneralDashboardComponent implements OnInit {
     this.quizService.create(this.newQuiz.title, this.newQuiz.description).subscribe({
         next: (q) => {
             const el = document.getElementById('createQuizModal');
-            if (el) bootstrap.Modal.getInstance(el).hide();
+            if (el) {
+              const inst = bootstrap.Modal.getInstance(el);
+              if (inst) inst.hide();
+            }
             this.switchView('library');
             alert(`Quiz Created! Code: ${q.code}`);
+        },
+        error: (err) => {
+          console.error('Create quiz failed', err);
+          alert('Create quiz failed');
         }
     });
   }
 
   copyLink(code: string) {
-    const link = `http://localhost:4200/play/${code}`;
-    navigator.clipboard.writeText(link).then(() => alert('Copied link to clipboard!'));
+    // Use window.location.origin so the link works on deployed host as well
+    const origin = window.location.origin || '';
+    const link = `${origin}/play/${code}`;
+    navigator.clipboard.writeText(link).then(() => alert('Copied link to clipboard!'))
+      .catch(err => {
+        console.error('Failed to copy link', err);
+        alert('Failed to copy link');
+      });
   }
 
   deleteQuiz(id: number) {
     if(confirm('Are you sure you want to delete this quiz?')) {
-        this.quizService.delete(id).subscribe();
+        this.quizService.delete(id).subscribe({
+          next: () => {
+            // refresh handled by service's refreshNeeded$ subscription
+          },
+          error: (err) => {
+            console.error('Delete failed', err);
+            alert('Delete failed');
+          }
+        });
     }
   }
 
@@ -243,7 +296,10 @@ export class GeneralDashboardComponent implements OnInit {
         alert('Profile updated successfully!');
         this.loadUserProfile();
       },
-      error: () => alert('Update failed')
+      error: (err) => {
+        console.error('Update failed', err);
+        alert('Update failed');
+      }
     });
   }
 
@@ -257,7 +313,10 @@ export class GeneralDashboardComponent implements OnInit {
         alert('Password changed successfully!');
         this.passwordData = { currentPassword: '', newPassword: '', confirmPassword: '' };
       },
-      error: (err) => alert(err.error || 'Password change failed')
+      error: (err) => {
+        console.error('Password change failed', err);
+        alert(err.error || 'Password change failed');
+      }
     });
   }
 }
