@@ -1,0 +1,8 @@
+{
+  "/api": {
+    "target": "https://m-p-sharda-b.onrender.com",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}
