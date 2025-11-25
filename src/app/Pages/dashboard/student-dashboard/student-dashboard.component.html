@@ -1,0 +1,625 @@
+<div class="d-flex" id="wrapper">
+  <!-- SIDEBAR -->
+  <div class="bg-white border-end sticky-top" style="min-width: 260px; height: 100vh; overflow-y: auto;">
+    <div class="sidebar-heading text-center py-4 border-bottom mb-2">
+      <div class="fw-bold text-primary fs-4"><i class="bi bi-mortarboard-fill me-2"></i>Student Portal</div>
+      <small class="text-muted d-block">Learning Management</small>
+    </div>
+
+
+
+    <!-- NAV -->
+    <div class="list-group list-group-flush px-2">
+      <button class="list-group-item list-group-item-action border-0 rounded mb-2"
+              [class.active-tab]="currentView === 'dashboard'" (click)="switchView('dashboard')">
+        <i class="bi bi-grid-1x2-fill me-2"></i> Overview
+      </button>
+
+      <button class="list-group-item list-group-item-action border-0 rounded mb-2"
+              [class.active-tab]="currentView === 'results'" (click)="switchView('results')">
+        <i class="bi bi-journal-text me-2"></i> My Results
+      </button>
+
+      <button class="list-group-item list-group-item-action text-danger border-0 mt-4" (click)="logout()">
+        <i class="bi bi-box-arrow-left me-2"></i> Logout
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="page-content-wrapper" class="w-100 bg-light">
+    <nav class="navbar navbar-light bg-white border-bottom shadow-sm px-4 py-3">
+      <div class="d-flex align-items-center">
+        <h5 class="m-0 fw-bold text-dark text-uppercase">{{ currentView }}</h5>
+      </div>
+
+      <div class="ms-auto d-flex align-items-center" style="cursor: pointer;" (click)="switchView('settings')">
+        <span class="me-3 text-muted small">Welcome, <strong>{{ currentUser?.name }}</strong></span>
+
+        <img *ngIf="currentUser?.profileImageUrl" [src]="currentUser.profileImageUrl"
+             class="rounded-circle border" width="40" height="40" style="object-fit: cover;">
+        <div *ngIf="!currentUser?.profileImageUrl"
+             class="rounded-circle bg-dark text-white d-flex justify-content-center align-items-center fw-bold"
+             style="width: 40px; height: 40px;">
+             {{ currentUser?.name?.charAt(0) | uppercase }}
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid p-4">
+
+      <!-- DASHBOARD VIEW -->
+      <div *ngIf="currentView === 'dashboard'" class="animate__animated animate__fadeIn">
+        <div class="row justify-content-center mb-5">
+          <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm bg-white rounded-3 text-center p-5 hover-card">
+              <div class="mb-3">
+                <i class="bi bi-pencil-square fs-1 text-primary"></i>
+              </div>
+              <h3 class="fw-bold mb-2">Join an Exam</h3>
+              <p class="text-muted mb-4">Enter the exam code provided by your faculty</p>
+              <div class="input-group input-group-lg shadow-sm">
+                <input type="text" class="form-control border-primary" placeholder="e.g. MATH-101"
+                       [(ngModel)]="examCode" style="text-transform: uppercase;">
+                <button class="btn btn-primary px-5 fw-bold" (click)="joinExam()">
+                  START <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="row g-4 mb-4">
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-4 border-start border-4 border-primary">
+              <div class="card-body">
+                <h6 class="text-muted text-uppercase small">Exams Attempted</h6>
+                <h2 class="mb-0 fw-bold text-dark">{{ stats.totalTests }}</h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-4 border-start border-4 border-success">
+              <div class="card-body">
+                <h6 class="text-muted text-uppercase small">Average Score</h6>
+                <h2 class="mb-0 fw-bold text-dark">{{ stats.avgScore }}%</h2>
+                <small class="text-success" *ngIf="stats.avgScore >= 75"><i class="bi bi-graph-up"></i> Excellent</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-4 border-start border-4 border-info">
+              <div class="card-body">
+                <h6 class="text-muted text-uppercase small">Pass Rate</h6>
+                <h2 class="mb-0 fw-bold text-dark">{{ getPercentage(stats.passed, stats.totalTests) }}%</h2>
+                <small class="text-muted">{{ stats.passed }} Passed / {{ stats.failed }} Needs Improvement</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent results -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold m-0">Recent Results</h5>
+          <button class="btn btn-link text-decoration-none" (click)="switchView('results')">View Full History</button>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="ps-4">Exam Title</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th class="text-end pe-4">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let h of historyList.slice(0, 3)">
+                    <td class="ps-4 fw-bold">{{ h.quizTitle }}</td>
+                    <td>
+                      <span [ngClass]="getPercentage(h.score, h.totalQuestions) >= 50 ? 'text-success fw-bold' : 'text-danger fw-bold'">
+                        {{ h.score }} / {{ h.totalQuestions }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge rounded-pill"
+                            [ngClass]="getPercentage(h.score, h.totalQuestions) >= 50 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                        {{ getPercentage(h.score, h.totalQuestions) >= 50 ? 'Passed' : 'Failed' }}
+                      </span>
+                    </td>
+                    <td class="text-end pe-4 text-muted small">{{ h.dateAttempted }}</td>
+                  </tr>
+                  <tr *ngIf="historyList.length === 0">
+                    <td colspan="4" class="text-center py-4 text-muted">No recent activity found.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTS VIEW -->
+      <div *ngIf="currentView === 'results'" class="animate__animated animate__fadeIn">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="m-0 fw-bold">Exam History</h5>
+            <span class="badge bg-primary">{{ historyList.length }} Records</span>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="ps-4">Code</th>
+                    <th>Title</th>
+                    <th>Score</th>
+                    <th>Result</th>
+                    <th>Date</th>
+                    <th class="text-end pe-4">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let h of historyList">
+                    <td class="ps-4"><span class="badge bg-light text-dark border">{{ h.quizCode }}</span></td>
+                    <td class="fw-bold">{{ h.quizTitle }}</td>
+                    <td>
+                      {{ h.score }} / {{ h.totalQuestions }}
+                      <small class="text-muted">({{ getPercentage(h.score, h.totalQuestions) }}%)</small>
+                    </td>
+                    <td>
+                      <span class="badge rounded-pill"
+                            [ngClass]="getPercentage(h.score, h.totalQuestions) >= 50 ? 'bg-success' : 'bg-danger'">
+                        {{ getPercentage(h.score, h.totalQuestions) >= 50 ? 'PASS' : 'FAIL' }}
+                      </span>
+                    </td>
+                    <td class="text-muted small">{{ h.dateAttempted }}</td>
+                    <td class="text-end pe-4">
+                      <button class="btn btn-sm btn-outline-primary" (click)="openReview(h.id)">Review</button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="historyList.length === 0">
+                    <td colspan="6" class="text-center py-5 text-muted">No exam records found.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS VIEW -->
+      <div *ngIf="currentView === 'settings'" class="animate__animated animate__fadeIn">
+        <div class="row justify-content-center">
+          <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+              <div class="card-body p-5">
+                <h4 class="mb-4 fw-bold">Account Settings</h4>
+
+                <div class="row mb-4">
+                  <div class="col-md-3 text-center">
+                    <div class="position-relative d-inline-block">
+                      <img [src]="imagePreview || currentUser?.profileImageUrl || 'assets/img/default-avatar.png'"
+                           class="rounded-circle border shadow-sm" width="100" height="100" style="object-fit: cover;">
+                      <label for="settingUpload" class="position-absolute bottom-0 end-0 bg-white border rounded-circle p-1 shadow-sm" style="cursor: pointer;">
+                        <i class="bi bi-camera-fill text-primary"></i>
+                      </label>
+                      <input type="file" id="settingUpload" class="d-none" (change)="onProfileImageSelected($event)" accept="image/*">
+                    </div>
+                  </div>
+
+                  <div class="col-md-9">
+                    <div class="mb-3">
+                      <label class="form-label small fw-bold">Full Name</label>
+                      <input type="text" class="form-control" [(ngModel)]="currentUser.name">
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="form-label small fw-bold">Email</label>
+                      <input type="text" class="form-control bg-light" [value]="currentUser?.email" disabled>
+                    </div>
+
+                    <!-- Additional fields requested: User Type + Institution (read-only display) -->
+                    <div class="row mb-3">
+                      <div class="col-6">
+                        <label class="form-label small text-muted">User Type</label>
+                        <div class="form-control bg-white">{{ currentUser.userType}}</div>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label small text-muted">Institution</label>
+                        <div class="form-control bg-white text-truncate">{{ institutionDetails.instituteName}}</div>
+                        <div class="form-control bg-white text-truncate">{{ institutionDetails.instituteLocation}}</div>
+                      </div>
+                    </div>
+
+                    <button class="btn btn-primary px-4" (click)="updateProfile()">Save Profile</button>
+                  </div>
+                </div>
+
+                <h6 class="text-muted border-bottom pb-2 mb-3 mt-5">Security</h6>
+                <form (ngSubmit)="changePassword()">
+                  <div class="row">
+                    <div class="col-md-4 mb-3">
+                      <label class="form-label small fw-bold">Current Password</label>
+                      <input type="password" class="form-control" [(ngModel)]="passwordData.currentPassword" name="cp">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label class="form-label small fw-bold">New Password</label>
+                      <input type="password" class="form-control" [(ngModel)]="passwordData.newPassword" name="np">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label class="form-label small fw-bold">Confirm</label>
+                      <input type="password" class="form-control" [(ngModel)]="passwordData.confirmPassword" name="cfp">
+                    </div>
+                  </div>
+                  <div class="text-end">
+                    <button type="submit" class="btn btn-danger px-4">Update Password</button>
+                  </div>
+                </form>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- container-fluid -->
+  </div> <!-- page-content-wrapper -->
+</div> <!-- wrapper -->
+
+<!-- REVIEW MODAL -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow-lg">
+      <div *ngIf="reviewData" class="modal-body p-0">
+        <div class="bg-primary text-white p-4">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h4 class="fw-bold mb-1">{{ reviewData.quizTitle }}</h4>
+              <p class="mb-0 opacity-75">
+                Code: <strong>{{ reviewData.quizCode }}</strong> •
+                Faculty: <strong>{{ reviewData.facultyName }}</strong> ({{ reviewData.facultyEmail }})
+              </p>
+            </div>
+            <div class="text-end">
+              <h2 class="fw-bold mb-0">{{ reviewData.score }} / {{ reviewData.totalQuestions }}</h2>
+              <span class="badge bg-white text-primary">Final Score</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4 bg-light">
+          <div *ngFor="let q of reviewData.questions; let i = index" class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+              <div class="d-flex">
+                <span class="fw-bold me-2 text-muted">{{ i + 1 }}.</span>
+                <div class="flex-grow-1">
+                  <h6 class="fw-bold text-dark mb-3">{{ q.content }}</h6>
+
+                  <div *ngIf="q.type === 'MCQ'">
+                    <div *ngFor="let opt of q.options" class="mb-1 p-2 rounded border"
+                         [ngClass]="{
+                           'bg-success-subtle border-success text-success fw-bold': opt === q.correctAnswer,
+                           'bg-danger-subtle border-danger text-danger': reviewData.userAnswers[q.id] === opt && opt !== q.correctAnswer,
+                           'bg-white': reviewData.userAnswers[q.id] !== opt && opt !== q.correctAnswer
+                         }">
+                      <i class="bi me-2"
+                         [ngClass]="{
+                           'bi-check-circle-fill': opt === q.correctAnswer,
+                           'bi-x-circle-fill': reviewData.userAnswers[q.id] === opt && opt !== q.correctAnswer,
+                           'bi-circle': reviewData.userAnswers[q.id] !== opt && opt !== q.correctAnswer
+                         }"></i>
+                      {{ opt }}
+
+                      <span *ngIf="reviewData.userAnswers[q.id] === opt && opt !== q.correctAnswer" class="float-end small fw-bold">Your Answer</span>
+                      <span *ngIf="opt === q.correctAnswer" class="float-end small fw-bold">Correct Answer</span>
+                    </div>
+                  </div>
+
+                  <div *ngIf="q.type === 'CODING'">
+                    <div class="alert alert-secondary small">Coding questions are manually reviewed.</div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+<!-- 
+
+<div class="d-flex" id="wrapper">
+  <div class="bg-white border-end sticky-top" style="min-width: 260px; height: 100vh; overflow-y: auto;">
+    <div class="sidebar-heading text-center py-4 border-bottom mb-3">
+      <div class="fw-bold text-primary fs-4"><i class="bi bi-mortarboard-fill me-2"></i>Student Portal</div>
+      <small class="text-muted">Learning Management</small>
+    </div>
+    
+    <div class="text-center px-3 mb-4" *ngIf="currentUser.institutionId">
+      <img *ngIf="institutionDetails.instituteImage" [src]="institutionDetails.instituteImage" 
+           class="rounded-circle border shadow-sm mb-2" width="60" height="60" style="object-fit: cover;">
+      <h6 class="fw-bold text-dark m-0">{{ institutionDetails.instituteName }}</h6>
+      <small class="text-muted">{{ institutionDetails.instituteLocation || 'Campus' }}</small>
+    </div>
+
+    <div class="list-group list-group-flush px-2">
+      <button class="list-group-item list-group-item-action border-0 rounded mb-2"
+              [class.active-tab]="currentView === 'dashboard'" (click)="switchView('dashboard')">
+        <i class="bi bi-grid-1x2-fill me-2"></i> Overview
+      </button>
+      <button class="list-group-item list-group-item-action border-0 rounded mb-2"
+              [class.active-tab]="currentView === 'results'" (click)="switchView('results')">
+        <i class="bi bi-journal-text me-2"></i> My Results
+      </button>
+      <button class="list-group-item list-group-item-action text-danger border-0 mt-5" (click)="logout()">
+        <i class="bi bi-box-arrow-left me-2"></i> Logout
+      </button>
+    </div>
+  </div>
+
+  <div id="page-content-wrapper" class="w-100 bg-light">
+    
+    <nav class="navbar navbar-light bg-white border-bottom shadow-sm px-4 py-3">
+      <div class="d-flex align-items-center">
+        <h5 class="m-0 fw-bold text-dark text-uppercase">{{ currentView }}</h5>
+      </div>
+      <div class="ms-auto d-flex align-items-center">
+        <span class="me-3 text-muted small">Welcome, <strong>{{ currentUser.name }}</strong></span>
+        
+        <img *ngIf="currentUser.profileImageUrl" [src]="currentUser.profileImageUrl" 
+             class="rounded-circle border" width="40" height="40" style="object-fit: cover;">
+        <div *ngIf="!currentUser.profileImageUrl" 
+             class="rounded-circle bg-dark text-white d-flex justify-content-center align-items-center fw-bold" 
+             style="width: 40px; height: 40px;">
+             {{ currentUser.name.charAt(0) | uppercase }}
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid p-4">
+
+      <div *ngIf="currentView === 'dashboard'" class="animate__animated animate__fadeIn">
+        
+        <div class="row justify-content-center mb-5">
+          <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm bg-white rounded-3 text-center p-5 hover-card">
+              <div class="mb-3">
+                <i class="bi bi-pencil-square fs-1 text-primary"></i>
+              </div>
+              <h3 class="fw-bold mb-2">Join an Exam</h3>
+              <p class="text-muted mb-4">Enter the exam code provided by your faculty</p>
+              <div class="input-group input-group-lg shadow-sm">
+                <input type="text" class="form-control border-primary" placeholder="e.g. MATH-101" 
+                       [(ngModel)]="examCode" style="text-transform: uppercase;">
+                <button class="btn btn-primary px-5 fw-bold" (click)="joinExam()">
+                  START <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-4 border-start border-4 border-primary">
+              <div class="card-body">
+                <h6 class="text-muted text-uppercase small">Exams Attempted</h6>
+                <h2 class="mb-0 fw-bold text-dark">{{ stats.totalTests }}</h2>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-4 border-start border-4 border-success">
+              <div class="card-body">
+                <h6 class="text-muted text-uppercase small">Average Score</h6>
+                <h2 class="mb-0 fw-bold text-dark">{{ stats.avgScore }}%</h2>
+                <small class="text-success" *ngIf="stats.avgScore >= 75"><i class="bi bi-graph-up"></i> Excellent</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-4 border-start border-4 border-info">
+              <div class="card-body">
+                <h6 class="text-muted text-uppercase small">Pass Rate</h6>
+                <h2 class="mb-0 fw-bold text-dark">{{ getPercentage(stats.passed, stats.totalTests) }}%</h2>
+                <small class="text-muted">{{ stats.passed }} Passed / {{ stats.failed }} Needs Improvement</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold m-0">Recent Results</h5>
+          <button class="btn btn-link text-decoration-none" (click)="switchView('results')">View Full History</button>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="ps-4">Exam Title</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th class="text-end pe-4">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let h of historyList.slice(0, 3)">
+                    <td class="ps-4 fw-bold">{{ h.quizTitle }}</td>
+                    <td>
+                      <span [ngClass]="getPercentage(h.score, h.totalQuestions) >= 50 ? 'text-success fw-bold' : 'text-danger fw-bold'">
+                        {{ h.score }} / {{ h.totalQuestions }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge rounded-pill" 
+                            [ngClass]="getPercentage(h.score, h.totalQuestions) >= 50 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                        {{ getPercentage(h.score, h.totalQuestions) >= 50 ? 'Passed' : 'Failed' }}
+                      </span>
+                    </td>
+                    <td class="text-end pe-4 text-muted small">{{ h.dateAttempted }}</td>
+                  </tr>
+                  <tr *ngIf="historyList.length === 0">
+                    <td colspan="4" class="text-center py-4 text-muted">No recent activity found.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div *ngIf="currentView === 'results'" class="animate__animated animate__fadeIn">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="m-0 fw-bold">Exam History</h5>
+            <span class="badge bg-primary">{{ historyList.length }} Records</span>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="ps-4">Code</th>
+                    <th>Title</th>
+                    <th>Score</th>
+                    <th>Result</th>
+                    <th>Date</th>
+                    <th class="text-end pe-4">Action</th> </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let h of historyList">
+                    <td class="ps-4"><span class="badge bg-light text-dark border">{{ h.quizCode }}</span></td>
+                    <td class="fw-bold">{{ h.quizTitle }}</td>
+                    <td>
+                      {{ h.score }} / {{ h.totalQuestions }} 
+                      <small class="text-muted">({{ getPercentage(h.score, h.totalQuestions) }}%)</small>
+                    </td>
+                    <td>
+                      <span class="badge rounded-pill"
+                            [ngClass]="getPercentage(h.score, h.totalQuestions) >= 50 ? 'bg-success' : 'bg-danger'">
+                        {{ getPercentage(h.score, h.totalQuestions) >= 50 ? 'PASS' : 'FAIL' }}
+                      </span>
+                    </td>
+                    <td class="text-muted small">{{ h.dateAttempted }}</td>
+                    
+                    <td class="text-end pe-4">
+                      <button class="btn btn-sm btn-outline-primary" (click)="openReview(h.id)">
+                        Review <i class="bi bi-eye-fill ms-1"></i>
+                      </button>
+                    </td>
+
+                  </tr>
+                  <tr *ngIf="historyList.length === 0">
+                    <td colspan="6" class="text-center py-5 text-muted">
+                      <i class="bi bi-journal-x display-4 d-block mb-3"></i>
+                      No exam records found.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="reviewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow-lg">
+      <div *ngIf="reviewData" class="modal-body p-0">
+        
+        <div class="bg-primary text-white p-4">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h4 class="fw-bold mb-1">{{ reviewData.quizTitle }}</h4>
+              <p class="mb-0 opacity-75">
+                Code: <strong>{{ reviewData.quizCode }}</strong> • 
+                Faculty: <strong>{{ reviewData.facultyName }}</strong> ({{ reviewData.facultyEmail }})
+              </p>
+            </div>
+            <div class="text-end">
+              <h2 class="fw-bold mb-0">{{ reviewData.score }} / {{ reviewData.totalQuestions }}</h2>
+              <span class="badge bg-white text-primary">Final Score</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4 bg-light">
+          <div *ngFor="let q of reviewData.questions; let i = index" class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+              <div class="d-flex">
+                <span class="fw-bold me-2 text-muted">{{ i + 1 }}.</span>
+                <div class="flex-grow-1">
+                  <h6 class="fw-bold text-dark mb-3">{{ q.content }}</h6>
+
+                  <div *ngIf="q.type === 'MCQ'">
+                    <div *ngFor="let opt of q.options" class="mb-1 p-2 rounded border"
+                         [ngClass]="{
+                           'bg-success-subtle border-success text-success fw-bold': opt === q.correctAnswer,
+                           'bg-danger-subtle border-danger text-danger': reviewData.userAnswers[q.id] === opt && opt !== q.correctAnswer,
+                           'bg-white': reviewData.userAnswers[q.id] !== opt && opt !== q.correctAnswer
+                         }">
+                      
+                      <i class="bi me-2" 
+                         [ngClass]="{
+                           'bi-check-circle-fill': opt === q.correctAnswer,
+                           'bi-x-circle-fill': reviewData.userAnswers[q.id] === opt && opt !== q.correctAnswer,
+                           'bi-circle': reviewData.userAnswers[q.id] !== opt && opt !== q.correctAnswer
+                         }"></i>
+                      {{ opt }}
+                      
+                      <span *ngIf="reviewData.userAnswers[q.id] === opt && opt !== q.correctAnswer" class="float-end small fw-bold">Your Answer</span>
+                      <span *ngIf="opt === q.correctAnswer" class="float-end small fw-bold">Correct Answer</span>
+                    </div>
+                  </div>
+
+                  <div *ngIf="q.type === 'CODING'">
+                    <div class="alert alert-secondary small">Coding questions are manually reviewed.</div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>  -->

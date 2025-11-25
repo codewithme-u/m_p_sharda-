@@ -1,0 +1,72 @@
+<div class="container mt-4">
+  <h2 class="mb-3">Institution Form</h2>
+
+  <form #institutionForm="ngForm" (ngSubmit)="submitInstitution(institutionForm)" class="row g-3">
+    <div class="col-md-4">
+      <input type="text" class="form-control" name="instituteName" placeholder="Institution Name"
+        [(ngModel)]="institutionFormData.instituteName" required />
+    </div>
+
+    <div class="col-md-4">
+      <input type="text" class="form-control" name="instituteLocation" placeholder="Location"
+        [(ngModel)]="institutionFormData.instituteLocation" required />
+    </div>
+
+    <div class="col-md-4">
+      <input type="file" class="form-control" (change)="onLogoSelected($event)" #logoInput />
+      <div *ngIf="selectedLogoBase64" class="mt-2">
+        <img [src]="selectedLogoBase64" width="60" height="60" class="rounded border" 
+             style="object-fit: cover;" alt="Preview" />
+      </div>
+    </div>
+
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary" [disabled]="!institutionForm.form.valid">
+        {{ selectedInstitution ? 'Update Institution' : 'Add Institution' }}
+      </button>
+      <button *ngIf="selectedInstitution" type="button" class="btn btn-secondary ms-2" (click)="resetForm()">
+        Cancel
+      </button>
+    </div>
+  </form>
+
+  <hr class="my-4" />
+
+  <h3>Institution List</h3>
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped mt-3">
+      <thead class="table-dark">
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Location</th>
+          <th>Logo</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let institution of institutions">
+          <td>{{ institution.id }}</td>
+          <td>{{ institution.instituteName }}</td>
+          <td>{{ institution.instituteLocation }}</td>
+          <td>
+             <img *ngIf="institution.instituteImage" 
+                  [src]="'http://localhost:8080/' + institution.instituteImage" 
+                  width="50" height="50" 
+                  style="object-fit: cover;"
+                  alt="Logo"
+                  onerror="this.style.display='none'" />
+             <span *ngIf="!institution.instituteImage" class="text-muted small">No Logo</span>
+          </td>
+          <td>
+            <button class="btn btn-sm btn-warning me-1" (click)="editInstitution(institution)">Edit</button>
+            <button class="btn btn-sm btn-danger" (click)="removeInstitution(institution.id)">Delete</button>
+          </td>
+        </tr>
+        <tr *ngIf="institutions.length === 0">
+            <td colspan="5" class="text-center text-muted">No institutions found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

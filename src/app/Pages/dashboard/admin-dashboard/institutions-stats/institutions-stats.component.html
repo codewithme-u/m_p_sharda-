@@ -1,0 +1,34 @@
+<div class="card shadow border-0">
+  <div class="card-header bg-white py-3">
+    <h6 class="m-0 font-weight-bold text-secondary text-uppercase">Institution Insights</h6>
+  </div>
+  <div class="card-body p-0">
+    
+    <div *ngIf="loading" class="p-4 text-center">
+      <div class="spinner-border text-primary spinner-border-sm"></div> Loading...
+    </div>
+
+    <div *ngIf="!loading && stats.length === 0" class="p-4 text-center text-muted">
+      <i class="bi bi-bar-chart fs-1 d-block mb-2"></i>
+      No stats available
+    </div>
+
+    <div class="list-group list-group-flush" *ngIf="stats.length > 0">
+      <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-3" 
+           *ngFor="let s of stats; let i = index">
+        <div class="d-flex align-items-center">
+          <span class="badge bg-light text-dark rounded-pill me-3">#{{ i + 1 }}</span>
+          <div>
+            <h6 class="mb-0 fw-bold">{{ s.name }}</h6>
+            <small class="text-muted">Students Enrolled</small>
+          </div>
+        </div>
+        <span class="badge bg-primary rounded-pill fs-6">{{ s.studentCount }}</span>
+      </div>
+    </div>
+    
+    <div class="card-footer bg-light text-center small text-muted">
+      Auto-updates in real-time
+    </div>
+  </div>
+</div>

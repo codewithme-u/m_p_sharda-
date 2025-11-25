@@ -1,0 +1,30 @@
+/* student-dashboard.component.css */
+
+/* sidebar card spacing */
+.sidebar-heading { padding-top: 1.2rem; padding-bottom: 1rem; }
+
+/* avatar sizes and consistent border */
+.avatar-wrapper img,
+.sidebar .avatar-wrapper img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* make the left profile card look clickable (settings) */
+.card .btn.btn-transparent {
+  display: block;
+  text-align: left;
+}
+
+/* small arrow alignment */
+.sidebar-heading .bi-chevron-right { opacity: 0.6; }
+
+/* reduce very long text overflow */
+.list-group .text-truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* responsive: hide institute small block on narrow screens */
+@media (max-width: 768px) {
+  .px-3.py-2.d-none.d-md-flex { display: none !important; }
+}

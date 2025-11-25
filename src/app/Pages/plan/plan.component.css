@@ -1,0 +1,12 @@
+body {
+    background: linear-gradient(135deg, #0a0f24, #1a233a);
+    color: #fff;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    max-width: 1200px;
+}

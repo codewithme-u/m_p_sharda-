@@ -1,0 +1,58 @@
+<div class="help-section bg-dark text-white min-vh-100 py-5">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="fw-bold text-light">Help & Support</h2>
+      <p class="text-secondary">Find answers to common questions or reach out to our support team.</p>
+    </div>
+
+    <div class="row">
+      <!-- FAQ Accordion -->
+      <div class="col-lg-7">
+        <div class="accordion shadow-sm bg-light rounded-3" id="faqAccordion">
+          <div class="accordion-item mb-3 rounded-3" *ngFor="let faq of faqs; let i = index">
+            <h2 class="accordion-header" [id]="'heading' + i">
+              <button class="accordion-button collapsed fw-semibold rounded-3" type="button"
+                data-bs-toggle="collapse" [attr.data-bs-target]="'#collapse' + i" aria-expanded="false"
+                [attr.aria-controls]="'collapse' + i">
+                {{ faq.question }}
+              </button>
+            </h2>
+            <div [id]="'collapse' + i" class="accordion-collapse collapse"
+              [attr.aria-labelledby]="'heading' + i" data-bs-parent="#faqAccordion">
+              <div class="accordion-body text-dark rounded-3">
+                {{ faq.answer }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact Support -->
+      <div class="col-lg-5 mt-4 mt-lg-0">
+        <div class="card shadow-sm border-0 rounded-3">
+          <div class="card-body">
+            <h5 class="card-title fw-bold mb-3 text-dark">Contact Support</h5>
+            <form>
+              <div class="mb-3">
+                <label for="name" class="form-label fw-bold text-dark">Full Name</label>
+                <input type="text" id="name" class="form-control bg-light text-dark border-secondary rounded-3"
+                  placeholder="John Doe" required>
+              </div>
+              <div class="mb-3">
+                <label for="email" class="form-label fw-bold text-dark">Email Address</label>
+                <input type="email" id="email" class="form-control bg-light text-dark border-secondary rounded-3"
+                  placeholder="john@example.com" required>
+              </div>
+              <div class="mb-3">
+                <label for="message" class="form-label fw-bold text-dark">Your Message</label>
+                <textarea id="message" class="form-control bg-light text-dark border-secondary rounded-3" rows="4"
+                  placeholder="Describe your issue..." required></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary w-100 rounded-3">Submit Request</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
