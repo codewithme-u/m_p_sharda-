@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8080'   // Local Spring Boot
+  apiUrl: ''   // empty so AuthService uses '/api/auth' and the proxy handles it
 };
