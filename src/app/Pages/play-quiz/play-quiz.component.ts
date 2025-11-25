@@ -1,12 +1,14 @@
+// src/app/Pages/play-quiz/play-quiz.component.ts
 import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/AuthService/auth.service';
-import { jwtDecode } from 'jwt-decode'; // named import used by your build
+import { jwtDecode } from 'jwt-decode';
+import { environment } from '../../../environments/environment';
 
-declare var bootstrap: any; 
+declare var bootstrap: any;
 
 @Component({
   selector: 'app-play-quiz',
@@ -29,49 +31,69 @@ export class PlayQuizComponent implements OnInit, OnDestroy {
 
   // PROCTORING & TIMER STATES
   quizStarted = false;
-  timeLeft: number = 3600; 
+  timeLeft: number = 3600;
   intervalId: any;
-  
+
   proctoringViolations: number = 0;
-  maxViolations = 3; 
+  maxViolations = 3;
   isProctoringActive = false;
-  
+
   isViolating: boolean = false;
   violationTimer: any;
-  gracePeriodSeconds: number = 5; 
+  gracePeriodSeconds: number = 5;
 
-  // token-derived (in-memory only) — not displayed raw
+  // token-derived (in-memory only)
   roleType: string | null = null;
   userEmail: string | null = null;
   issuedAt: number | null = null;   // seconds
   expiresAt: number | null = null;  // seconds
-  
+
+  // store bound listeners so we can remove them properly
+  private boundVisibilityHandler = this.handleVisibilityChange.bind(this);
+  private boundFullscreenHandler = this.handleFullscreenChange.bind(this);
+
+  // base urls built from environment.apiUrl
+  private readonly baseApiRoot: string;
+  private readonly quizzesUrl: string;
+  private readonly questionsUrl: string;
+  private readonly resultsUrl: string;
+
   constructor(
-    private route: ActivatedRoute, 
-    private http: HttpClient, 
-    private router: Router, 
-    private authService: AuthService 
-  ) {}
+    private route: ActivatedRoute,
+    private http: HttpClient,
+    private router: Router,
+    private authService: AuthService
+  ) {
+    const apiRoot = environment?.apiUrl && environment.apiUrl.trim().length
+      ? environment.apiUrl.replace(/\/$/, '')
+      : '';
+    this.baseApiRoot = apiRoot;
+    this.quizzesUrl = apiRoot ? `${apiRoot}/api/quizzes` : '/api/quizzes';
+    this.questionsUrl = apiRoot ? `${apiRoot}/api/questions` : '/api/questions';
+    this.resultsUrl = apiRoot ? `${apiRoot}/api/results` : '/api/results';
+  }
 
   ngOnInit(): void {
     this.quizCode = this.route.snapshot.paramMap.get('code') || '';
     this.decodeTokenForRole();   // decode for routing/logic only (no raw token stored)
     this.loadQuizData();
 
-    // Register proctoring listeners
-    document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-    document.addEventListener('fullscreenchange', this.handleFullscreenChange.bind(this));
+    // Register proctoring listeners (use stored bound functions so removal works)
+    document.addEventListener('visibilitychange', this.boundVisibilityHandler);
+    document.addEventListener('fullscreenchange', this.boundFullscreenHandler);
   }
 
   ngOnDestroy(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId);
     }
-    clearTimeout(this.violationTimer); 
+    if (this.violationTimer) {
+      clearTimeout(this.violationTimer);
+    }
     this.exitFullscreen();
 
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-    document.removeEventListener('fullscreenchange', this.handleFullscreenChange.bind(this));
+    document.removeEventListener('visibilitychange', this.boundVisibilityHandler);
+    document.removeEventListener('fullscreenchange', this.boundFullscreenHandler);
   }
 
   // -------------------------
@@ -188,39 +210,40 @@ export class PlayQuizComponent implements OnInit, OnDestroy {
     clearTimeout(this.violationTimer);
 
     if (isCritical) {
-        this.autoSubmit(true); 
-        return;
+      this.autoSubmit(true);
+      return;
     }
-    
+
     if (this.proctoringViolations >= this.maxViolations) {
-        this.autoSubmit(true); 
-        return;
+      this.autoSubmit(true);
+      return;
     }
 
     if (!this.isViolating) {
-        this.isViolating = true;
-        console.warn(`GRACE PERIOD STARTED: ${message}`);
-        this.violationTimer = setTimeout(() => {
-            if (this.isViolating) {
-                this.proctoringViolations++;
-                console.warn(`VIOLATION COUNTED (#${this.proctoringViolations}): User failed to recover.`);
-                if (this.proctoringViolations >= this.maxViolations) {
-                    this.autoSubmit(true);
-                } else {
-                    this.isViolating = false;
-                }
-            }
-        }, this.gracePeriodSeconds * 1000); 
+      this.isViolating = true;
+      console.warn(`GRACE PERIOD STARTED: ${message}`);
+      this.violationTimer = setTimeout(() => {
+        if (this.isViolating) {
+          this.proctoringViolations++;
+          console.warn(`VIOLATION COUNTED (#${this.proctoringViolations}): User failed to recover.`);
+          if (this.proctoringViolations >= this.maxViolations) {
+            this.autoSubmit(true);
+          } else {
+            this.isViolating = false;
+          }
+        }
+      }, this.gracePeriodSeconds * 1000);
     }
   }
 
   private resetViolationState() {
     if (this.violationTimer) {
-        clearTimeout(this.violationTimer);
+      clearTimeout(this.violationTimer);
     }
     this.isViolating = false;
   }
 
+  // NOTE: these are now instance methods referenced by bound listeners above
   handleVisibilityChange() {
     if (document.visibilityState === 'hidden') {
       this.handleViolation("Leaving the quiz window/tab.");
@@ -233,17 +256,32 @@ export class PlayQuizComponent implements OnInit, OnDestroy {
     if (this.quizStarted && !document.fullscreenElement) {
       this.handleViolation("Exiting fullscreen mode.", true);
     } else {
-        this.resetViolationState();
+      this.resetViolationState();
     }
   }
 
   // -------------------------
   // Data loading + error handling
   // -------------------------
+  private makeHeaders(): { headers?: HttpHeaders } {
+    const token = this.authService.getToken() || localStorage.getItem('token');
+    if (token) {
+      return {
+        headers: new HttpHeaders({
+          'Authorization': `Bearer ${token}`
+        })
+      };
+    }
+    return {};
+  }
+
   loadQuizData() {
     this.loading = true;
     this.errorMessage = '';
-    this.http.get<any>(`http://localhost:8080/api/quizzes/code/${this.quizCode}`).subscribe({
+
+    const quizByCodeUrl = `${this.quizzesUrl}/code/${this.quizCode}`;
+
+    this.http.get<any>(quizByCodeUrl, this.makeHeaders()).subscribe({
       next: (quiz) => {
         if (quiz && (quiz.active === false || quiz.active === 'false')) {
           this.loading = false;
@@ -261,7 +299,8 @@ export class PlayQuizComponent implements OnInit, OnDestroy {
         }
 
         if (quiz && quiz.id != null) {
-          this.http.get<any[]>(`http://localhost:8080/api/questions/quiz/${quiz.id}`).subscribe({
+          const qUrl = `${this.questionsUrl}/quiz/${quiz.id}`;
+          this.http.get<any[]>(qUrl, this.makeHeaders()).subscribe({
             next: qs => {
               this.questions = qs || [];
               this.loading = false;
@@ -305,26 +344,27 @@ export class PlayQuizComponent implements OnInit, OnDestroy {
     this.exitFullscreen();
     this.isProctoringActive = false;
 
-    const message = penalty 
+    const message = penalty
       ? "Quiz auto-submitted due to excessive proctoring violations."
       : "Time expired. Quiz auto-submitted.";
-    
+
     alert(message);
-    
+
     this.submitQuiz(true);
   }
 
   submitQuiz(isAutoSubmit = false) {
-    if(this.isSubmitted) return;
-    if(!isAutoSubmit && !confirm("Are you sure you want to submit?")) return;
+    if (this.isSubmitted) return;
+    if (!isAutoSubmit && !confirm("Are you sure you want to submit?")) return;
 
     clearInterval(this.intervalId);
     this.exitFullscreen();
     this.isProctoringActive = false;
 
     const payload = this.selectedOptions;
+    const submitUrl = `${this.resultsUrl}/submit/${this.quizCode}`;
 
-    this.http.post(`http://localhost:8080/api/results/submit/${this.quizCode}`, payload, { responseType: 'text' }).subscribe({
+    this.http.post(submitUrl, payload, { ...this.makeHeaders(), responseType: 'text' as 'json' }).subscribe({
       next: () => {
         this.isSubmitted = true;
         this.score = 0;
@@ -336,10 +376,11 @@ export class PlayQuizComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Submit error:', err);
-        if (err.status === 200) {
-             this.isSubmitted = true;
+        // some servers return status 200 with error? keep your old behavior but handle normally
+        if (err && err.status === 200) {
+          this.isSubmitted = true;
         } else {
-             alert("Failed to submit quiz. Please try again.");
+          alert("Failed to submit quiz. Please try again.");
         }
       }
     });

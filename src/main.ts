@@ -1,8 +1,25 @@
-/// <reference types="@angular/localize" />
+// src/app/app.config.ts
+import { importProvidersFrom } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { TokenInterceptor } from './app/core/interceptors/token.interceptor';
+import { routes as appRoutes } from './app/app.routes';
 
-import { bootstrapApplication } from '@angular/platform-browser';
-import { appConfig } from './app/app.config';
-import { AppComponent } from './app/app.component';
+export const appConfig = {
+  providers: [
+    // Router provider (use your routes from app.routes.ts)
+    provideRouter(appRoutes),
 
-bootstrapApplication(AppComponent, appConfig)
-  .catch((err) => console.error(err));
+    // Import HttpClientModule so HttpClient is available to the app
+    importProvidersFrom(HttpClientModule),
+
+    // Register TokenInterceptor globally
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: TokenInterceptor,
+      multi: true
+    },
+
+    // add other global providers here (guards, state, etc.)
+  ]
+};
