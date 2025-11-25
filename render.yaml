@@ -1,0 +1,7 @@
+services:
+  - type: static
+    name: mp-frontend
+    env: static
+    branch: main
+    buildCommand: "npm ci && npm run build"
+    publishPath: "dist/mp"
