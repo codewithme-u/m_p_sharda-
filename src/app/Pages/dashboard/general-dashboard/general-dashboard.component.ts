@@ -89,23 +89,36 @@ export class GeneralDashboardComponent implements OnInit {
 
   // --- API & DATA LOADING ---
 
-  loadUserProfile() {
-    this.userService.getMe().subscribe({
-      next: (data) => {
-        this.currentUser = data;
-        // if backend returns a relative path, prefix with apiBase (if set)
-        if (this.currentUser.profileImageUrl && !this.currentUser.profileImageUrl.startsWith('http')) {
-          if (this.apiBase) {
-            this.currentUser.profileImageUrl = `${this.apiBase}/${this.currentUser.profileImageUrl.replace(/^\//, '')}`;
-          } else {
-            // dev: keep relative so dev proxy / server serves it
-            this.currentUser.profileImageUrl = `/${this.currentUser.profileImageUrl.replace(/^\//, '')}`;
-          }
-        }
-      },
-      error: (err) => console.error('Failed to load profile', err)
-    });
-  }
+loadUserProfile() {
+  this.userService.getMe().subscribe({
+    next: (data) => {
+      this.currentUser = data;
+      let img = this.currentUser.profileImageUrl;
+
+      if (!img) return;
+
+      const apiBase = (environment.apiUrl || '').replace(/\/$/, '');
+
+      // 1️⃣ Case: backend returns absolute localhost URL (prod breaks)
+      if (img.startsWith('http://localhost:8080') || img.startsWith('https://localhost:8080')) {
+        const path = img.replace(/^https?:\/\/[^\/]+/, ''); // remove host
+        this.currentUser.profileImageUrl = apiBase
+          ? `${apiBase}${path}`
+          : path;
+        return;
+      }
+
+      // 2️⃣ Case: backend returns relative path (uploads/abc.png)
+      if (!img.startsWith('http://') && !img.startsWith('https://')) {
+        this.currentUser.profileImageUrl = apiBase
+          ? `${apiBase}/${img.replace(/^\//, '')}`
+          : `/${img.replace(/^\//, '')}`;
+      }
+    },
+    error: (err) => console.error('Failed to load profile', err)
+  });
+}
+
 
   loadQuizzes() {
     this.quizService.getAll().subscribe({
